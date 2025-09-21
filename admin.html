@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reviews Admin</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; background: #f8f8f8; }
+    h1 { margin-bottom: 1rem; }
+    .review { background: #fff; border: 1px solid #ddd; padding: 1rem; margin-bottom: 1rem; border-radius: 4px; }
+    .meta { font-size: 0.85rem; color: #666; margin-bottom: 0.5rem; }
+    button { margin-right: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Pending Reviews</h1>
+  <div id="list"></div>
+  <script>
+    async function loadPending() {
+      const res = await fetch('/admin/reviews?status=pending');
+      const data = await res.json();
+      const list = document.getElementById('list');
+      list.innerHTML = '';
+      if (!data.reviews || !data.reviews.length) {
+        list.textContent = 'No pending reviews.';
+        return;
+      }
+      for (const r of data.reviews) {
+        const div = document.createElement('div');
+        div.className = 'review';
+        div.innerHTML = `
+          <div class="meta"><strong>${r.title}</strong> — ${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
+          <div>${r.body}</div>
+          <div class="meta">By ${r.author_name} (${r.author_email}) on ${new Date(r.created_at).toLocaleDateString()}</div>
+          <button data-action="approve" data-id="${r.id}">Approve</button>
+          <button data-action="reject" data-id="${r.id}">Reject</button>
+        `;
+        list.appendChild(div);
+      }
+    }
+
+    document.addEventListener('click', async (e) => {
+      const btn = e.target;
+      if (btn.dataset && btn.dataset.action) {
+        const id = btn.dataset.id;
+        const status = btn.dataset.action === 'approve' ? 'approved' : 'rejected';
+        await fetch('/admin/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status })
+        });
+        loadPending();
+      }
+    });
+
+    loadPending();
+  </script>
+</body>
+</html>
